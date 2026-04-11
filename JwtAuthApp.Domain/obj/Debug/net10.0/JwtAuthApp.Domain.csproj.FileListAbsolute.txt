@@ -1,0 +1,11 @@
+C:\Users\Ismoil\OneDrive\Desktop\Programming\.Net\month2\week2\JwtAuthApp\JwtAuthApp.Domain\bin\Debug\net10.0\JwtAuthApp.Domain.deps.json
+C:\Users\Ismoil\OneDrive\Desktop\Programming\.Net\month2\week2\JwtAuthApp\JwtAuthApp.Domain\bin\Debug\net10.0\JwtAuthApp.Domain.dll
+C:\Users\Ismoil\OneDrive\Desktop\Programming\.Net\month2\week2\JwtAuthApp\JwtAuthApp.Domain\bin\Debug\net10.0\JwtAuthApp.Domain.pdb
+C:\Users\Ismoil\OneDrive\Desktop\Programming\.Net\month2\week2\JwtAuthApp\JwtAuthApp.Domain\obj\Debug\net10.0\JwtAuthApp.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Ismoil\OneDrive\Desktop\Programming\.Net\month2\week2\JwtAuthApp\JwtAuthApp.Domain\obj\Debug\net10.0\JwtAuthApp.Domain.AssemblyInfoInputs.cache
+C:\Users\Ismoil\OneDrive\Desktop\Programming\.Net\month2\week2\JwtAuthApp\JwtAuthApp.Domain\obj\Debug\net10.0\JwtAuthApp.Domain.AssemblyInfo.cs
+C:\Users\Ismoil\OneDrive\Desktop\Programming\.Net\month2\week2\JwtAuthApp\JwtAuthApp.Domain\obj\Debug\net10.0\JwtAuthApp.Domain.csproj.CoreCompileInputs.cache
+C:\Users\Ismoil\OneDrive\Desktop\Programming\.Net\month2\week2\JwtAuthApp\JwtAuthApp.Domain\obj\Debug\net10.0\JwtAuthApp.Domain.dll
+C:\Users\Ismoil\OneDrive\Desktop\Programming\.Net\month2\week2\JwtAuthApp\JwtAuthApp.Domain\obj\Debug\net10.0\refint\JwtAuthApp.Domain.dll
+C:\Users\Ismoil\OneDrive\Desktop\Programming\.Net\month2\week2\JwtAuthApp\JwtAuthApp.Domain\obj\Debug\net10.0\JwtAuthApp.Domain.pdb
+C:\Users\Ismoil\OneDrive\Desktop\Programming\.Net\month2\week2\JwtAuthApp\JwtAuthApp.Domain\obj\Debug\net10.0\ref\JwtAuthApp.Domain.dll
