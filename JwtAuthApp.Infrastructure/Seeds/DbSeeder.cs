@@ -1,6 +1,7 @@
 using JwtAuthApp.Domain.Entities;
 using JwtAuthApp.Domain.Enum;
 using JwtAuthApp.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace JwtAuthApp.Infrastructure.Seeds;
 
@@ -8,7 +9,7 @@ public class DbSeeder
 {
     public static async Task SeedAsync(AppDbContext context)
     {
-        var adminExists = context.Users.Any(u => u.Role == UserRole.Admin);
+        var adminExists = await context.Users.AnyAsync(u => u.Role == UserRole.Admin);
 
         if (adminExists) return;
 

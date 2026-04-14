@@ -1,4 +1,5 @@
 using System.Text;
+using JwtAuthApp.Application.DTOs.Auth.Email;
 using JwtAuthApp.Application.Interfaces.Repositories;
 using JwtAuthApp.Application.Interfaces.Services;
 using JwtAuthApp.Application.Services;
@@ -45,6 +46,10 @@ builder.Services.AddSwaggerGen(opt =>
     });
 });
 
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings")
+);
+
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var secretKey = jwtSettings["Key"]!;
 
@@ -75,6 +80,8 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IVerificationCodeRepository, VerificationCodeRepository>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 

@@ -14,6 +14,7 @@
     <Folder Include="Common\" />
     <Folder Include="DTOs\" />
     <Folder Include="DTOs\Auth\" />
+    <Folder Include="DTOs\Auth\Email\" />
     <Folder Include="DTOs\Auth\Request\" />
     <Folder Include="DTOs\Auth\Response\" />
     <Folder Include="DTOs\Users\" />

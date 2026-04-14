@@ -23,4 +23,7 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
     public UserRole Role { get; set; } = UserRole.User;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation properties
+    public ICollection<VerificationCode> VerificationCodes { get; set; } = [];
 }

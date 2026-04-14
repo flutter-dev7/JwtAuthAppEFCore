@@ -57,6 +57,50 @@ namespace JwtAuthApp.Infrastructure.Migrations
 
                     b.ToTable("Users");
                 });
+
+            modelBuilder.Entity("JwtAuthApp.Domain.Entities.VerificationCode", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)");
+
+                    b.Property<DateTime>("Expiration")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("VerificationCodes");
+                });
+
+            modelBuilder.Entity("JwtAuthApp.Domain.Entities.VerificationCode", b =>
+                {
+                    b.HasOne("JwtAuthApp.Domain.Entities.User", "User")
+                        .WithMany("VerificationCodes")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("JwtAuthApp.Domain.Entities.User", b =>
+                {
+                    b.Navigation("VerificationCodes");
+                });
 #pragma warning restore 612, 618
         }
     }

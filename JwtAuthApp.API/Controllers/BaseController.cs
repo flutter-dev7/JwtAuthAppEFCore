@@ -11,12 +11,12 @@ public class BaseController : ControllerBase
     {
         return result.ErrorType switch
         {
-            ErrorType.Validation => BadRequest(result.Error),
-            ErrorType.NotFound => NotFound(result.Error),
-            ErrorType.Conflict => Conflict(result.Error),
-            ErrorType.Unauthorized => Unauthorized(result.Error),
+            ErrorType.Validation => BadRequest(result),
+            ErrorType.NotFound => NotFound(result),
+            ErrorType.Conflict => Conflict(result),
+            ErrorType.Unauthorized => Unauthorized(result),
             _ => StatusCode(StatusCodes.Status500InternalServerError,
-                "An unexpected error occurred.")
+                result)
         };
     }
 }

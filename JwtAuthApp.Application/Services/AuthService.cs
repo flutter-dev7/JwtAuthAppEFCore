@@ -1,4 +1,5 @@
 using System;
+using System.Net.Mail;
 using JwtAuthApp.Application.Common;
 using JwtAuthApp.Application.DTOs.Auth.Request;
 using JwtAuthApp.Application.DTOs.Auth.Response;
@@ -13,11 +14,15 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IJwtService _jwtService;
+    private readonly IEmailService _emailService;
+    private readonly IVerificationCodeRepository _verificationCodeRepository;
 
-    public AuthService(IUserRepository userRepository, IJwtService jwtService)
+    public AuthService(IUserRepository userRepository, IJwtService jwtService, IEmailService emailService, IVerificationCodeRepository verificationCodeRepository)
     {
         _userRepository = userRepository;
         _jwtService = jwtService;
+        _emailService = emailService;
+        _verificationCodeRepository = verificationCodeRepository;
     }
 
     public async Task<Result<LoginResponseDto>> LoginAsync(LoginDto login)
@@ -96,5 +101,100 @@ public class AuthService : IAuthService
         {
             return Result<RegisterResponseDto>.Fail($"Error: {ex.Message}", Domain.Enum.ErrorType.Unknown);
         }
+    }
+
+    public async Task<Result<bool>> ChangePasswordAsync(string email, ChangePasswordDto request)
+    {
+        if (request.NewPassword.Length < 6)
+            return Result<bool>.Fail("Password must be at least 6 characters", ErrorType.Validation);
+
+        if (request.NewPassword != request.ConfirmPassword)
+            return Result<bool>.Fail("Passwords do not match", ErrorType.Validation);
+        try
+        {
+            var user = await _userRepository.GetByUserEmailAsync(email);
+
+            if (user == null)
+                return Result<bool>.Fail($"User with Id = {user!.Id} not found", ErrorType.NotFound);
+
+            if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+                return Result<bool>.Fail("Current password is incorrect", ErrorType.Validation);
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+            await _userRepository.UpdateUserAsync(user);
+
+            return Result<bool>.Ok(true);
+        }
+        catch (Exception e)
+        {
+            return Result<bool>.Fail($"Error: {e.Message}", ErrorType.Unknown);
+        }
+    }
+
+    public async Task<Result<bool>> SendEmailAsync(SendEmailDto request)
+    {
+        var user = await _userRepository.GetByUserEmailAsync(request.Email);
+
+        if (user == null)
+            return Result<bool>.Fail($"User with Email = {request.Email} not found", ErrorType.NotFound);
+
+        var code = new Random().Next(100_000, 999_999).ToString();
+        try
+        {
+            var result = await _emailService.SendEmailAsync(request.Email, "Password reset", $"<h3>{code} is your password reset code.</h3>");
+            if (!result)
+            {
+                return Result<bool>.Fail("Failed to send email");
+            }
+        }
+        catch (SmtpException e)
+        {
+            return Result<bool>.Fail("Failed to send email: " + e.Message);
+        }
+
+        var verificationCode = new VerificationCode
+        {
+            UserId = user.Id,
+            Code = code,
+            Expiration = DateTime.UtcNow.AddMinutes(3)
+        };
+
+        await _verificationCodeRepository.AddAsync(verificationCode);
+
+        return Result<bool>.Ok(true);
+    }
+
+    public async Task<Result<bool>> VerifyCodeAsync(VerifyCodeDto request)
+    {
+        var user = await _userRepository.GetByUserEmailAsync(request.Email);
+        if (user == null)
+        {
+            return Result<bool>.Fail("Email not found", ErrorType.NotFound);
+        }
+
+        var lastCode = await _verificationCodeRepository.GetLatestVerificationCodeAsync(user.Id);
+        if (lastCode == null || lastCode.Code != request.Code || lastCode.Expiration < DateTime.UtcNow)
+            return Result<bool>.Fail("Invalid or expired verification code", ErrorType.Validation);
+
+        return Result<bool>.Ok(true);
+    }
+
+    public async Task<Result<bool>> ResetPasswordAsync(ResetPasswordDto request)
+    {
+        var user = await _userRepository.GetByUserEmailAsync(request.Email);
+        if (user == null)
+        {
+            return Result<bool>.Fail("Email not found", ErrorType.NotFound);
+        }
+
+        if (request.NewPassword != request.ConfirmPassword)
+            return Result<bool>.Fail("Password do not match", ErrorType.Validation);
+
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        user.PasswordHash = passwordHash;
+        await _userRepository.UpdateUserAsync(user);
+
+        return Result<bool>.Ok(true);
     }
 }
