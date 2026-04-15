@@ -2,6 +2,7 @@ using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using JwtAuthApp.Application.Common;
 using JwtAuthApp.Application.Interfaces.Services;
 using JwtAuthApp.Domain.Entities;
 using Microsoft.Extensions.Configuration;
@@ -19,18 +20,22 @@ public class JwtService : IJwtService
     }
     public string GenerateToken(User user)
     {
+        var permissions = RolePermissions.GetPermissions(user.Role);
         var secretKey = _configuration["Jwt:Key"];
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!));
 
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.Role, user.Role.ToString()),
         };
+
+        claims.AddRange(permissions.Select(p => new Claim("permissions", p.ToString())));
+
 
         var token = new JwtSecurityToken(
             issuer: _configuration["Jwt:Issuer"],

@@ -12,24 +12,18 @@ namespace JwtAuthApp.Application.Services;
 
 public class AuthService : IAuthService
 {
-    private readonly IUserRepository _userRepository;
-    private readonly IJwtService _jwtService;
-    private readonly IEmailService _emailService;
-    private readonly IVerificationCodeRepository _verificationCodeRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public AuthService(IUserRepository userRepository, IJwtService jwtService, IEmailService emailService, IVerificationCodeRepository verificationCodeRepository)
+    public AuthService(IUnitOfWork unitOfWork)
     {
-        _userRepository = userRepository;
-        _jwtService = jwtService;
-        _emailService = emailService;
-        _verificationCodeRepository = verificationCodeRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Result<LoginResponseDto>> LoginAsync(LoginDto login)
     {
         try
         {
-            var user = await _userRepository.GetByUserEmailAsync(login.Email);
+            var user = await _unitOfWork.UserRepository.GetByUserEmailAsync(login.Email);
 
             if (user == null)
                 return Result<LoginResponseDto>.Fail($"Invalid email or password");
@@ -37,7 +31,7 @@ public class AuthService : IAuthService
             if (!BCrypt.Net.BCrypt.Verify(login.Password, user.PasswordHash))
                 return Result<LoginResponseDto>.Fail("Invalid email or password");
 
-            var token = _jwtService.GenerateToken(user);
+            var token = _unitOfWork.Jwt.GenerateToken(user);
 
             var result = new LoginResponseDto()
             {
@@ -66,7 +60,7 @@ public class AuthService : IAuthService
         if (string.IsNullOrWhiteSpace(register.Email))
             return Result<RegisterResponseDto>.Fail("Email cannot be empty", Domain.Enum.ErrorType.Validation);
 
-        if (await _userRepository.GetByUserEmailAsync(register.Email) != null)
+        if (await _unitOfWork.UserRepository.GetByUserEmailAsync(register.Email) != null)
             return Result<RegisterResponseDto>.Fail("Email already exists", Domain.Enum.ErrorType.Validation);
 
         if (register.Password.Length < 6)
@@ -86,7 +80,7 @@ public class AuthService : IAuthService
                 PasswordHash = passwordHash
             };
 
-            await _userRepository.CreateUserAsync(user);
+            await _unitOfWork.UserRepository.CreateUserAsync(user);
 
             return Result<RegisterResponseDto>.Ok(new RegisterResponseDto
             {
@@ -112,7 +106,7 @@ public class AuthService : IAuthService
             return Result<bool>.Fail("Passwords do not match", ErrorType.Validation);
         try
         {
-            var user = await _userRepository.GetByUserEmailAsync(email);
+            var user = await _unitOfWork.UserRepository.GetByUserEmailAsync(email);
 
             if (user == null)
                 return Result<bool>.Fail($"User with Id = {user!.Id} not found", ErrorType.NotFound);
@@ -122,7 +116,7 @@ public class AuthService : IAuthService
 
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
 
-            await _userRepository.UpdateUserAsync(user);
+            await _unitOfWork.UserRepository.UpdateUserAsync(user);
 
             return Result<bool>.Ok(true);
         }
@@ -134,15 +128,53 @@ public class AuthService : IAuthService
 
     public async Task<Result<bool>> SendEmailAsync(SendEmailDto request)
     {
-        var user = await _userRepository.GetByUserEmailAsync(request.Email);
+        var user = await _unitOfWork.UserRepository.GetByUserEmailAsync(request.Email);
 
         if (user == null)
             return Result<bool>.Fail($"User with Email = {request.Email} not found", ErrorType.NotFound);
 
         var code = new Random().Next(100_000, 999_999).ToString();
+        var htmlBody = $@"
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset='UTF-8'>
+        <style>
+            body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }}
+            .container {{ max-width: 500px; margin: 40px auto; background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }}
+            .header {{ background: linear-gradient(135deg, #667eea, #764ba2); padding: 30px; text-align: center; }}
+            .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+            .body {{ padding: 30px; text-align: center; }}
+            .body p {{ color: #555; font-size: 15px; line-height: 1.6; }}
+            .code-box {{ display: inline-block; background: #f0f0f0; border: 2px dashed #667eea; border-radius: 8px; padding: 15px 40px; margin: 20px 0; }}
+            .code {{ font-size: 36px; font-weight: bold; color: #667eea; letter-spacing: 8px; }}
+            .warning {{ color: #999; font-size: 13px; margin-top: 10px; }}
+            .footer {{ background: #f9f9f9; padding: 15px; text-align: center; color: #aaa; font-size: 12px; border-top: 1px solid #eee; }}
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='header'>
+                <h1>🔐 Password Reset</h1>
+            </div>
+            <div class='body'>
+                <p>Hello, <strong>{user.Username}</strong>!</p>
+                <p>We received a request to reset your password.<br>Use the code below:</p>
+                <div class='code-box'>
+                    <div class='code'>{code}</div>
+                </div>
+                <p class='warning'>⏱ This code expires in <strong>3 minutes</strong>.</p>
+                <p class='warning'>If you did not request this, ignore this email.</p>
+            </div>
+            <div class='footer'>
+                © 2026 JwtAuthApp — Do not reply to this email
+            </div>
+        </div>
+    </body>
+    </html>";
         try
         {
-            var result = await _emailService.SendEmailAsync(request.Email, "Password reset", $"<h3>{code} is your password reset code.</h3>");
+            var result = await _unitOfWork.Email.SendEmailAsync(request.Email, "Password reset", htmlBody);
             if (!result)
             {
                 return Result<bool>.Fail("Failed to send email");
@@ -160,20 +192,20 @@ public class AuthService : IAuthService
             Expiration = DateTime.UtcNow.AddMinutes(3)
         };
 
-        await _verificationCodeRepository.AddAsync(verificationCode);
+        await _unitOfWork.VerificationCodeRepository.AddAsync(verificationCode);
 
         return Result<bool>.Ok(true);
     }
 
     public async Task<Result<bool>> VerifyCodeAsync(VerifyCodeDto request)
     {
-        var user = await _userRepository.GetByUserEmailAsync(request.Email);
+        var user = await _unitOfWork.UserRepository.GetByUserEmailAsync(request.Email);
         if (user == null)
         {
             return Result<bool>.Fail("Email not found", ErrorType.NotFound);
         }
 
-        var lastCode = await _verificationCodeRepository.GetLatestVerificationCodeAsync(user.Id);
+        var lastCode = await _unitOfWork.VerificationCodeRepository.GetLatestVerificationCodeAsync(user.Id);
         if (lastCode == null || lastCode.Code != request.Code || lastCode.Expiration < DateTime.UtcNow)
             return Result<bool>.Fail("Invalid or expired verification code", ErrorType.Validation);
 
@@ -182,7 +214,7 @@ public class AuthService : IAuthService
 
     public async Task<Result<bool>> ResetPasswordAsync(ResetPasswordDto request)
     {
-        var user = await _userRepository.GetByUserEmailAsync(request.Email);
+        var user = await _unitOfWork.UserRepository.GetByUserEmailAsync(request.Email);
         if (user == null)
         {
             return Result<bool>.Fail("Email not found", ErrorType.NotFound);
@@ -193,7 +225,7 @@ public class AuthService : IAuthService
 
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
         user.PasswordHash = passwordHash;
-        await _userRepository.UpdateUserAsync(user);
+        await _unitOfWork.UserRepository.UpdateUserAsync(user);
 
         return Result<bool>.Ok(true);
     }
